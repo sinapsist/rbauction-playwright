@@ -11,18 +11,24 @@ export interface RepresentativeCard {
   text: string;
 }
 
+export interface YardLocation {
+  name: string;
+  slug: string;
+}
+
+/** Yard Page */
 export class YardPage extends BasePage {
   constructor(page: Page) {
     super(page);
   }
 
-  async openEdmonton(): Promise<void> {
-    await this.goto('/lp/edmonton-ab');
-    await this.locationHeading().waitFor();
+  async open(location: YardLocation): Promise<void> {
+    await this.goto(`/lp/${location.slug}`);
+    await this.locationHeading(location.name).waitFor();
   }
 
-  locationHeading(): Locator {
-    return this.page.getByRole('heading', { name: 'Edmonton', exact: true });
+  locationHeading(name: string): Locator {
+    return this.page.getByRole('heading', { name, exact: true });
   }
 
   detailsSection(): Locator {

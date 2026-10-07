@@ -1,9 +1,11 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../src/fixtures/test';
 import { pageProps, readNextData } from '../../src/api/page-json';
 import { countryLabel, LocationsPageProps } from '../../src/api/types';
+import { step } from '../../src/helpers/step';
 
 test.describe('API 1 — Auction sites list', () => {
   test('reads yards from the locations page JSON', async ({ page }) => {
+    await step(page, 'Read the yards list from the locations page JSON', async () => {
     await page.goto('/lp', { waitUntil: 'domcontentloaded' });
     const data = await readNextData<LocationsPageProps>(page);
     const yards = pageProps(data).yards;
@@ -33,5 +35,6 @@ test.describe('API 1 — Auction sites list', () => {
     expect(countries.size).toBeGreaterThan(8);
     expect(countries).toContain('United States');
     expect(countries).toContain('Canada');
+    });
   });
 });

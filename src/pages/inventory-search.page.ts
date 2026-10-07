@@ -1,6 +1,7 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/** Inventory Search Page */
 export class InventorySearchPage extends BasePage {
   constructor(page: Page) {
     super(page);
@@ -8,11 +9,12 @@ export class InventorySearchPage extends BasePage {
 
   async openEdmonton(): Promise<void> {
     await this.goto('/search?freeText=Edmonton');
-    await this.resultsHeading().waitFor();
+    await this.resultsHeading('Edmonton').waitFor();
   }
 
-  resultsHeading(): Locator {
-    return this.page.getByText(/results for\s+"Edmonton"/i).first();
+  resultsHeading(city: string): Locator {
+    const escapedCity = city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return this.page.getByText(new RegExp(`results for\\s+"${escapedCity}"`, 'i')).first();
   }
 
   searchBox(): Locator {
@@ -25,9 +27,5 @@ export class InventorySearchPage extends BasePage {
 
   lotCards(): Locator {
     return this.page.locator('main li:has(h4)').filter({ hasNot: this.page.locator('li') });
-  }
-
-  async lotTitles(): Promise<string[]> {
-    return this.lotCards().locator('h4').allTextContents();
   }
 }

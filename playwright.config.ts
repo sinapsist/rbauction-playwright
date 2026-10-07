@@ -1,3 +1,4 @@
+import os from 'node:os';
 import { defineConfig, devices } from '@playwright/test';
 
 /**
@@ -20,6 +21,22 @@ export default defineConfig({
   reporter: [
     ['list'],
     ['html', { open: 'never' }],
+    [
+      'allure-playwright',
+      {
+        resultsDir: 'allure-results',
+        // Playwright's automatic action steps cannot carry attachments.
+        // Report steps are the explicit scenario steps, and each one attaches its own screenshot.
+        detail: false,
+        suiteTitle: false,
+        environmentInfo: {
+          os_platform: os.platform(),
+          os_release: os.release(),
+          node_version: process.version,
+          base_url: 'https://www.rbauction.com',
+        },
+      },
+    ],
   ],
   use: {
     baseURL: 'https://www.rbauction.com',

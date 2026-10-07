@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test';
-import { dismissCookieBanner } from '../support/cookies';
+import { dismissCookieBanner } from '../helpers/cookies';
 
+/** Base Page class */
 export class BasePage {
   constructor(protected readonly page: Page) {}
 

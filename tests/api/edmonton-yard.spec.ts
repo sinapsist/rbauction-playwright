@@ -1,9 +1,11 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../src/fixtures/test';
 import { pageProps, readNextData } from '../../src/api/page-json';
 import { flattenCategories, YardPageProps } from '../../src/api/types';
+import { step } from '../../src/helpers/step';
 
 test.describe('API 2 — Edmonton yard page JSON', () => {
   test('reads yard details, events, and items in yard from one payload', async ({ page }) => {
+    await step(page, 'Read the Edmonton yard payload', async () => {
     await page.goto('/lp/edmonton-ab', { waitUntil: 'domcontentloaded' });
     const data = await readNextData<YardPageProps>(page);
     const props = pageProps(data);
@@ -46,5 +48,6 @@ test.describe('API 2 — Edmonton yard page JSON', () => {
       }
     }
     expect(categories.map((category) => category.categoryLocalized)).toContain('Excavators');
+    });
   });
 });

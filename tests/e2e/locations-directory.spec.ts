@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
-import { LocationsPage } from '../../src/pages/locations.page';
-import { isSatelliteLabel } from '../../src/support/parse';
+import { expect, test } from '../../src/fixtures/test';
+import { isSatelliteLabel } from '../../src/helpers/parse';
+import { step } from '../../src/helpers/step';
 
 const REQUIRED_COUNTRIES = [
   'United States',
@@ -12,85 +12,93 @@ const REQUIRED_COUNTRIES = [
 ];
 
 test.describe('Scenario 1 — Locations directory', () => {
-  test.beforeEach(async ({ page }) => {
-    const locations = new LocationsPage(page);
-    await locations.open();
+  test('1.1 shows the locations heading and intro', async ({ page, locationsDirectory }) => {
+    await step(page, 'Check the locations heading and intro', async () => {
+      await expect(page).toHaveTitle(/auction sites/i);
+      await expect(locationsDirectory.heading()).toBeVisible();
+      await expect(locationsDirectory.intro()).toBeVisible();
+    });
   });
 
-  test('1.1 shows the locations heading and intro', async ({ page }) => {
-    const locations = new LocationsPage(page);
-    await expect(page).toHaveTitle(/auction sites/i);
-    await expect(locations.heading()).toBeVisible();
-    await expect(locations.intro()).toBeVisible();
+  test('1.2 explains that satellite sites are marked with an asterisk', async ({ page, locationsDirectory }) => {
+    await step(page, 'Read the satellite-site note', async () => {
+      await expect(locationsDirectory.satelliteNote()).toBeVisible();
+      await expect(locationsDirectory.satelliteNote()).toContainText('*');
+    });
   });
 
-  test('1.2 explains that satellite sites are marked with an asterisk', async ({ page }) => {
-    const locations = new LocationsPage(page);
-    await expect(locations.satelliteNote()).toBeVisible();
-    await expect(locations.satelliteNote()).toContainText('*');
+  test('1.3 lists country groups below the map', async ({ page, locationsDirectory }) => {
+    await step(page, 'List the country groups', async () => {
+      await locationsDirectory.scrollToCountryList();
+
+      const countries = await locationsDirectory.countryNames();
+      expect(countries.length).toBeGreaterThan(0);
+      expect(countries[0]).toBe('United States');
+      expect(countries[1]).toBe('Canada');
+      expect(countries).toEqual(expect.arrayContaining(REQUIRED_COUNTRIES));
+    });
   });
 
-  test('1.3 lists country groups below the map', async ({ page }) => {
-    const locations = new LocationsPage(page);
-    await locations.scrollToCountryList();
+  test('1.4 lists sites Under United States (more than 20)', async ({ page, locationsDirectory }) => {
+    await step(page, 'List the United States sites', async () => {
+      const sites = (await locationsDirectory.sitesIn('United States')).map((label) => label.replace(/\*/g, '').trim());
 
-    const countries = await locations.countryNames();
-    expect(countries.length).toBeGreaterThan(0);
-    expect(countries[0]).toBe('United States');
-    expect(countries[1]).toBe('Canada');
-    expect(countries).toEqual(expect.arrayContaining(REQUIRED_COUNTRIES));
+      expect(sites.length).toBeGreaterThan(20);
+      expect(sites).toEqual(
+        expect.arrayContaining(['Phoenix', 'Salt Lake City', 'Houston', 'Las Vegas', 'Atlanta']),
+      );
+    });
   });
 
-  test('1.4 lists more than 20 United States sites, including the known yards', async ({ page }) => {
-    const locations = new LocationsPage(page);
-    const sites = (await locations.sitesIn('United States')).map((label) => label.replace(/\*/g, '').trim());
+  test('1.5 lists sites under Canada (more than 10)', async ({ page, locationsDirectory }) => {
+    await step(page, 'List the Canada sites', async () => {
+      const sites = (await locationsDirectory.sitesIn('Canada')).map((label) => label.replace(/\*/g, '').trim());
 
-    expect(sites.length).toBeGreaterThan(20);
-    expect(sites).toEqual(
-      expect.arrayContaining(['Phoenix', 'Salt Lake City', 'Houston', 'Las Vegas', 'Atlanta']),
-    );
+      expect(sites.length).toBeGreaterThan(10);
+      expect(sites).toEqual(expect.arrayContaining(['Edmonton', 'Montreal', 'Toronto', 'Regina', 'Saskatoon']));
+    });
   });
 
-  test('1.5 lists more than 10 Canadian sites, including the known yards', async ({ page }) => {
-    const locations = new LocationsPage(page);
-    const sites = (await locations.sitesIn('Canada')).map((label) => label.replace(/\*/g, '').trim());
+  test('1.6 counts satellite and permanent sites on the full directory', async ({ page, locationsDirectory }) => {
+    await step(page, 'Count satellite and permanent sites', async () => {
+      const sites = await locationsDirectory.allSites();
+      const satellite = sites.filter((site) => isSatelliteLabel(site.label));
+      const permanent = sites.filter((site) => !isSatelliteLabel(site.label));
 
-    expect(sites.length).toBeGreaterThan(10);
-    expect(sites).toEqual(expect.arrayContaining(['Edmonton', 'Montreal', 'Toronto', 'Regina', 'Saskatoon']));
+      expect(satellite.length).toBeGreaterThan(15);
+      expect(permanent.length).toBeGreaterThan(25);
+      expect(satellite.length + permanent.length).toBeGreaterThan(60);
+    });
   });
 
-  test('1.6 counts satellite and permanent sites on the full directory', async ({ page }) => {
-    const locations = new LocationsPage(page);
-    const sites = await locations.allSites();
-    const satellite = sites.filter((site) => isSatelliteLabel(site.label));
-    const permanent = sites.filter((site) => !isSatelliteLabel(site.label));
+  test('1.7 marks known satellite yards and leaves known permanent yards unmarked', async ({
+    page,
+    locationsDirectory,
+  }) => {
+    await step(page, 'Check known satellite and permanent yards', async () => {
+      const sites = await locationsDirectory.allSites();
+      const labelFor = (pattern: RegExp) => sites.find((site) => pattern.test(site.label))?.label;
 
-    expect(satellite.length).toBeGreaterThan(15);
-    expect(permanent.length).toBeGreaterThan(25);
-    expect(satellite.length + permanent.length).toBeGreaterThan(60);
+      expect(labelFor(/^San Antonio/)).toContain('*');
+      expect(labelFor(/^Calgary/)).toContain('*');
+      expect(labelFor(/^Phoenix$/)).toBe('Phoenix');
+      expect(labelFor(/^Edmonton$/)).toBe('Edmonton');
+    });
   });
 
-  test('1.7 marks known satellite yards and leaves known permanent yards unmarked', async ({ page }) => {
-    const locations = new LocationsPage(page);
-    const sites = await locations.allSites();
-    const labelFor = (pattern: RegExp) => sites.find((site) => pattern.test(site.label))?.label;
+  test('1.9 switches from auction sites to local representatives', async ({ page, locationsDirectory }) => {
+    await step(page, 'Check the Auction sites and Local representatives controls', async () => {
+      await expect(locationsDirectory.auctionSitesTab()).toBeVisible();
+      await expect(locationsDirectory.localRepresentativesTab()).toBeVisible();
+      await expect(locationsDirectory.auctionSitesTab()).toHaveAttribute('aria-selected', 'true');
+    });
 
-    expect(labelFor(/^San Antonio/)).toContain('*');
-    expect(labelFor(/^Calgary/)).toContain('*');
-    expect(labelFor(/^Phoenix$/)).toBe('Phoenix');
-    expect(labelFor(/^Edmonton$/)).toBe('Edmonton');
-  });
+    await step(page, 'Switch to Local representatives', async () => {
+      await locationsDirectory.showLocalRepresentatives();
 
-  test('1.9 switches from auction sites to local representatives', async ({ page }) => {
-    const locations = new LocationsPage(page);
-    await expect(locations.auctionSitesTab()).toBeVisible();
-    await expect(locations.localRepresentativesTab()).toBeVisible();
-    await expect(locations.auctionSitesTab()).toHaveAttribute('aria-selected', 'true');
-
-    await locations.showLocalRepresentatives();
-
-    await expect(locations.localRepresentativesTab()).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByText('Search for representatives')).toBeVisible();
-    await expect(locations.auctionSitesTab()).toHaveAttribute('aria-selected', 'false');
+      await expect(locationsDirectory.localRepresentativesTab()).toHaveAttribute('aria-selected', 'true');
+      await expect(page.getByText('Search for representatives')).toBeVisible();
+      await expect(locationsDirectory.auctionSitesTab()).toHaveAttribute('aria-selected', 'false');
+    });
   });
 });

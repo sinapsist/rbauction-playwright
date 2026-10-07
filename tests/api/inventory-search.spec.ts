@@ -1,12 +1,11 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../src/fixtures/test';
 import { SearchClient } from '../../src/api/search-client';
+import { step } from '../../src/helpers/step';
 
 test.describe('API 3 — Edmonton inventory search', () => {
-  test('POST /api/search returns a positive total and named records', async ({ page }) => {
-    const client = new SearchClient(page);
-    await client.openSession();
-
-    const response = await client.search('Edmonton');
+  test('POST /api/search returns a positive total and named records', async ({ page, searchClient }) => {
+    await step(page, 'POST /api/search for Edmonton', async () => {
+    const response = await searchClient.search('Edmonton');
     expect(response.status()).toBe(200);
     expect(response.headers()['content-type']).toContain('application/json');
 
@@ -23,5 +22,6 @@ test.describe('API 3 — Edmonton inventory search', () => {
     const titles = records.slice(0, 5).map((record) => record.assetDescription);
     console.log(`API inventory total for Edmonton: ${total}`);
     console.log('API first 5 titles:', titles);
+    });
   });
 });

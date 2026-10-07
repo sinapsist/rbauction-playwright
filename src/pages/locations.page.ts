@@ -6,6 +6,7 @@ export interface DirectorySite {
   label: string;
 }
 
+/** Locations Page */
 export class LocationsPage extends BasePage {
   constructor(page: Page) {
     super(page);
@@ -37,12 +38,8 @@ export class LocationsPage extends BasePage {
   }
 
   async countryNames(): Promise<string[]> {
-    return this.page.evaluate(() => {
-      return [...document.querySelectorAll('h4')]
-        .filter((heading) => heading.nextElementSibling?.tagName === 'UL')
-        .map((heading) => (heading.textContent || '').replace(/\s+/g, ' ').trim())
-        .filter(Boolean);
-    });
+    const headings = await this.page.locator('h4:has(+ ul)').allTextContents();
+    return headings.map((heading) => heading.replace(/\s+/g, ' ').trim()).filter(Boolean);
   }
 
   async scrollToCountryList(): Promise<void> {
@@ -52,16 +49,12 @@ export class LocationsPage extends BasePage {
   }
 
   async sitesIn(country: string): Promise<string[]> {
-    return this.page.evaluate((countryName) => {
-      const heading = [...document.querySelectorAll('h4')].find(
-        (element) => (element.textContent || '').trim() === countryName,
-      );
-      const list = heading?.nextElementSibling;
-      if (!list || list.tagName !== 'UL') return [];
-      return [...list.querySelectorAll('a')]
-        .map((link) => (link.textContent || '').replace(/\s+/g, ' ').trim())
-        .filter(Boolean);
-    }, country);
+    const list = this.page
+      .getByRole('heading', { level: 4, name: country, exact: true })
+      .locator('xpath=following-sibling::ul[1]');
+    return (await list.getByRole('link').allTextContents())
+      .map((label) => label.replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
   }
 
   async allSites(): Promise<DirectorySite[]> {
@@ -85,7 +78,6 @@ export class LocationsPage extends BasePage {
 
   async openSite(country: string, label: string): Promise<void> {
     await this.siteLink(country, label).click();
-    await this.page.waitForURL(/\/lp\//);
   }
 
   async searchForLocation(query: string): Promise<void> {
