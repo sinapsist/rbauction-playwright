@@ -12,8 +12,6 @@ The tests run against the live site at `https://www.rbauction.com`. Inventory co
 | UI-N-1.9 | Japan does not have cities; the local representatives are listed under the country |
 
 
-GET /api/locations
-
 ## Prerequisites
 
 - Node.js 18 or newer
