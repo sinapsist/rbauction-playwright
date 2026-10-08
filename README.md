@@ -9,7 +9,7 @@ The tests run against the live site at `https://www.rbauction.com`. Inventory co
 | Test No| Description |
 | --- | --- |
 | UI-N-1.9 | There is a probable issue with data because the representative name in the search field includes some junk data |
-| UI-N-1.9 | Japan does not have cities; the local representatives are listed under the country |
+| UI-N-1.6 | Japan does not have cities; the local representatives are listed under the country |
 
 
 ## Prerequisites
