@@ -1,5 +1,6 @@
 import os from 'node:os';
 import { defineConfig, devices } from '@playwright/test';
+import { browserContextOptions, chromeUserAgent } from './src/browser-options';
 
 /**
  * Akamai rejects Playwright's bundled headless Chromium (its user agent
@@ -9,8 +10,11 @@ import { defineConfig, devices } from '@playwright/test';
  */
 const bundledChromium = process.env.PLAYWRIGHT_CHROMIUM === 'bundled';
 
-const chromeUserAgent =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36';
+/**
+ * WebStorm adds its own reporter through PW_TEST_REPORTER, and that reporter
+ * already prints test stdout. Keeping `list` as well prints every console.log twice.
+ */
+const ideReporter = Boolean(process.env.PW_TEST_REPORTER);
 
 export default defineConfig({
   timeout: 90_000,
@@ -19,7 +23,7 @@ export default defineConfig({
   retries: 1,
   workers: 2,
   reporter: [
-    ['list'],
+    ...(ideReporter ? [] : [['list'] as const]),
     ['html', { open: 'never' }],
     [
       'allure-playwright',
@@ -39,11 +43,9 @@ export default defineConfig({
     ],
   ],
   use: {
-    baseURL: 'https://www.rbauction.com',
     ...devices['Desktop Chrome'],
+    ...browserContextOptions,
     userAgent: chromeUserAgent,
-    locale: 'en-US',
-    viewport: { width: 1440, height: 900 },
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     navigationTimeout: 45_000,
@@ -51,6 +53,7 @@ export default defineConfig({
   },
   projects: [
     { name: 'e2e', testDir: './tests/e2e' },
-    { name: 'api', testDir: './tests/api' },
+    // One worker per file so beforeAll loads each payload once for every check in that file.
+    { name: 'api', testDir: './tests/api', fullyParallel: false },
   ],
 });

@@ -2,48 +2,52 @@ import { expect, test } from '../../src/fixtures/test';
 import { parseDisplayedTotal } from '../../src/helpers/parse';
 import { step } from '../../src/helpers/step';
 
-test.describe('Scenario 4 — Edmonton inventory search', () => {
-  test('reads the displayed total and the first page of lots', async ({ page, inventorySearch }) => {
+test.describe('UI-4: Scenario 4 — Edmonton inventory search', () => {
+  test('UI-4.1: 4.1 Opens the Edmonton search', async ({ page, inventorySearch }) => {
     await step(page, 'Open the Edmonton search', async () => {
-      await inventorySearch.openEdmonton();
+      console.log("Expected: A search / inventory view opens.");
+      await inventorySearch.openCity('Edmonton');
 
+      console.log("Expected: The query or location context is Edmonton.");
       await expect(page).toHaveURL(/freeText=Edmonton/);
       await expect(inventorySearch.searchBox()).toHaveValue(/Edmonton/);
       await expect(inventorySearch.resultsHeading('Edmonton')).toBeVisible();
     });
+  });
 
-    await step(page, 'Read the displayed total and the first page of lots', async () => {
-      const headline = await inventorySearch.resultsHeading('Edmonton').innerText();
-      const range = await inventorySearch.resultRange().innerText();
-      const total = parseDisplayedTotal(`${headline}\n${range}`);
+  test('UI-4.2: 4.2 Results', async ({ page, inventorySearch }) => {
+    await step(page, 'Open the Edmonton search', async () => {
+      await inventorySearch.openCity('Edmonton');
+    });
+
+    await step(page, 'Read the displayed result total', async () => {
+      const { headline, range } = await inventorySearch.displayedTotals('Edmonton');
+      expect(headline ?? range, 'a result total is shown at the top or bottom of the list').toBeTruthy();
+
+      console.log("Expected: The total is a positive number, for example 2.2k results");
+      const total = parseDisplayedTotal([headline, range].filter(Boolean).join('\n'));
       expect(total).toBeGreaterThan(0);
 
-      const cards = inventorySearch.lotCards();
-      const count = await cards.count();
-      expect(count).toBeGreaterThan(0);
+      console.log(`Displayed inventory total: ${total} (${[headline, range].filter(Boolean).join('; ')})`);
+    });
 
-      const titles: string[] = [];
-      for (let index = 0; index < count; index += 1) {
-        const card = cards.nth(index);
-        const title = (await card.locator('h4').innerText()).trim();
-        expect(title.length).toBeGreaterThan(0);
-        titles.push(title);
+    await step(page, 'Check titles, locations, and closing dates on the first page', async () => {
+      const lots = await inventorySearch.lotSummaries();
+      expect(lots.length).toBeGreaterThan(0);
 
-        const text = await card.innerText();
-        if (/Closing:/i.test(text)) {
-          expect(text).toMatch(/Closing:\s*\S+/i);
+      console.log("Expected: Each lot visible on the first page has a title");
+      console.log("Expected: Where a location or closing/auction date is shown on the card, it is non-empty");
+      for (const [index, lot] of lots.entries()) {
+        expect(lot.title, `lot ${index + 1} title`).not.toBe('');
+        if (lot.location !== null) {
+          expect(lot.location, `lot ${index + 1} location`).not.toBe('');
         }
-        const location = text
-          .split('\n')
-          .map((line) => line.trim())
-          .find((line) => line !== title && /,\s*[A-Za-z]/.test(line) && !/Closing:/i.test(line));
-        if (location) {
-          expect(location.length).toBeGreaterThan(0);
+        if (lot.closing !== null) {
+          expect(lot.closing, `lot ${index + 1} closing date`).not.toBe('');
         }
       }
 
-      console.log(`Displayed inventory total: ${total} (${headline.trim()}; ${range.trim()})`);
-      console.log('First 5 titles:', titles.slice(0, 5));
+      console.log('First 5 titles:', lots.slice(0, 5).map((lot) => lot.title));
     });
   });
 });

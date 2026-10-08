@@ -69,6 +69,11 @@ export interface NextData<T> {
   };
 }
 
+/**
+ * Flattens an array of ItemsInYardGroup into a single array of YardCategory
+ * @param groups The array of ItemsInYardGroup to flatten
+ * @returns A flattened array of YardCategory
+ */
 export function flattenCategories(groups: ItemsInYardGroup[] | undefined): YardCategory[] {
   const categories: YardCategory[] = [];
 
@@ -92,6 +97,11 @@ export function flattenCategories(groups: ItemsInYardGroup[] | undefined): YardC
   return categories;
 }
 
+/**
+ * Returns a human-readable label for the country of a yard, falling back to the country code if necessary.
+ * @param yard The yard object to extract the country label from.
+ * @returns The country label, or an empty string if not available.
+ */
 export function countryLabel(yard: Yard): string {
   return yard.address?.country || yard.address?.countryCode || '';
 }

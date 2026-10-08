@@ -2,10 +2,10 @@ import { Page } from '@playwright/test';
 import * as allure from 'allure-js-commons';
 import { ContentType } from 'allure-js-commons';
 
-/**
- * Runs an Allure step and attaches a screenshot of the page after it finishes.
- * The screenshot is taken inside the step so the report shows it on that step,
- * including when the step fails.
+/** Wraps a Playwright action in an Allure step, automatically attaching a screenshot after the action completes.
+ * @param page The Playwright page object.
+ * @param name The name of the Allure step.
+ * @param action The async function to execute as the step.
  */
 export async function step(page: Page, name: string, action: () => Promise<void>): Promise<void> {
   await allure.step(name, async () => {
@@ -17,6 +17,9 @@ export async function step(page: Page, name: string, action: () => Promise<void>
   });
 }
 
+/** Attaches a screenshot to the current Allure step.
+ * @param page The Playwright page object.
+ */
 async function attachStepScreenshot(page: Page): Promise<void> {
   if (page.isClosed()) return;
 

@@ -1,4 +1,13 @@
-/** Reads the inventory total from a results headline or pager, for example `3.1k results` or `1-60 of 3143`. */
+const EVENT_META =
+    /^(preview|view items|timed auction|\d[\d,]*\s+items|\d+\s+day event|\+\s*\d+\s+more)$/i;
+
+const DATE_RANGE = /\b[A-Z][a-z]{2,9}\s+\d{1,2}\s*[-–]\s*[A-Z][a-z]{2,9}\s+\d{1,2}\b/;
+
+/**
+ * Reads the inventory total from a results headline or pager, for example `3.1k results` or `1-60 of 3143`.
+ * @param text The text to parse.
+ * @returns The inventory total.
+ */
 export function parseDisplayedTotal(text: string): number {
   const ofMatch = text.match(/\bof\s+([\d,]+)\b/i);
   if (ofMatch) {
@@ -20,20 +29,26 @@ export function parseDisplayedTotal(text: string): number {
   throw new Error(`No inventory total found in: ${text}`);
 }
 
+/**
+ * Returns true if the label contains an asterisk, which indicates that the site is a satellite location.
+ * @param label
+ */
 export function isSatelliteLabel(label: string): boolean {
   return label.includes('*');
 }
 
-const DATE_RANGE = /\b[A-Z][a-z]{2,9}\s+\d{1,2}\s*[-–]\s*[A-Z][a-z]{2,9}\s+\d{1,2}\b/;
-
+/**
+ * Returns true if the text contains a date range, for example `Mar 1 - Mar 3`.
+ * @param text The text to check.
+ */
 export function hasDateRange(text: string): boolean {
   return DATE_RANGE.test(text);
 }
-
-const EVENT_META =
-  /^(preview|view items|timed auction|\d[\d,]*\s+items|\d+\s+day event|\+\s*\d+\s+more)$/i;
-
-/** A card title is a non-empty line that is not the date range or event chrome. */
+/**
+ * Extracts the event title from a text, ignoring date ranges and event chrome.
+ * @param text The text to parse.
+ * @returns The event title, or undefined if not found.
+ */
 export function eventTitle(text: string): string | undefined {
   const lines = text
     .split('\n')

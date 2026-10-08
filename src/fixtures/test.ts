@@ -25,18 +25,22 @@ type AppFixtures = {
 };
 
 export const test = base.extend<AppFixtures>({
+  /** Page object only. The test decides when to open the directory. */
   locationsPage: async ({ page }, use) => {
     await use(new LocationsPage(page));
   },
 
+  /** Page object only. Used after a test navigates to a yard itself. */
   yardPage: async ({ page }, use) => {
     await use(new YardPage(page));
   },
 
+  /** Page object only. Opening the search is part of scenario 4. */
   inventorySearch: async ({ page }, use) => {
     await use(new InventorySearchPage(page));
   },
 
+  /** Directory already open. Shared start state for the locations scenarios. */
   locationsDirectory: async ({ page, locationsPage }, use) => {
     await step(page, 'Open the locations directory', async () => {
       await locationsPage.open();
@@ -44,6 +48,7 @@ export const test = base.extend<AppFixtures>({
     await use(locationsPage);
   },
 
+  /** The location of the yard to use for the test. */
   yard: [{ name: 'Edmonton', slug: 'edmonton-ab' }, { option: true }],
 
   edmontonYard: async ({ page, yardPage, yard }, use) => {
@@ -53,6 +58,7 @@ export const test = base.extend<AppFixtures>({
     await use(yardPage);
   },
 
+  /** Search client with a browser session already established. */
   searchClient: async ({ page }, use) => {
     const client = new SearchClient(page);
     await step(page, 'Open a browser session for the search API', async () => {

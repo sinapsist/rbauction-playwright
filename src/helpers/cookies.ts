@@ -1,5 +1,9 @@
 import { Page } from '@playwright/test';
 
+/**
+ * Dismisses the cookie banner on the page.
+ * @param page The Playwright page object.
+ */
 export async function dismissCookieBanner(page: Page): Promise<void> {
   const accept = page.getByRole('button', { name: 'I understand' });
   try {

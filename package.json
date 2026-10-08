@@ -10,6 +10,7 @@
     "test:headed": "playwright test --headed",
     "report": "playwright show-report",
     "allure:generate": "allure generate allure-results --clean -o allure-report",
+    "allure:fresh": "bash scripts/generate-allure-report.sh",
     "allure:open": "allure open allure-report",
     "allure:serve": "allure serve allure-results",
     "typecheck": "tsc --noEmit"
