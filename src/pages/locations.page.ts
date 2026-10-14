@@ -9,8 +9,19 @@ export interface DirectorySite {
 
 export type RepresentativeSearchMode = 'Auction site' | 'Name' | 'Location';
 
-const REPRESENTATIVE_SEARCH: Record<Exclude<RepresentativeSearchMode, 'Auction site'>, { placeholder: string; button: string }> = {
-  Name: { placeholder: 'Type first or last name', button: 'Search for a local representative by name' },
+export type RepresentativeQuery =
+  { mode: 'Name'; query: string } | { mode: 'Location'; query: string };
+
+interface RepresentativeSearchStrategy {
+  placeholder: string;
+  button: string;
+}
+
+const REPRESENTATIVE_SEARCH: Record<RepresentativeQuery['mode'], RepresentativeSearchStrategy> = {
+  Name: {
+    placeholder: 'Type first or last name',
+    button: 'Search for a local representative by name',
+  },
   Location: { placeholder: 'Address, region, or country', button: 'Search for a location' },
 };
 
@@ -77,7 +88,11 @@ export class LocationsPage extends BasePage {
    * Scrolls the page to the country list section and waits for the United States heading to be visible.
    */
   async scrollToCountryList(): Promise<void> {
-    const unitedStates = this.page.getByRole('heading', { level: 4, name: 'United States', exact: true });
+    const unitedStates = this.page.getByRole('heading', {
+      level: 4,
+      name: 'United States',
+      exact: true,
+    });
     await unitedStates.scrollIntoViewIfNeeded();
     await expect(unitedStates).toBeVisible();
   }
@@ -157,19 +172,21 @@ export class LocationsPage extends BasePage {
   async selectRepresentativeSearch(mode: RepresentativeSearchMode): Promise<void> {
     await this.representativeSearchType().click();
     await this.page.getByRole('option', { name: mode, exact: true }).click();
-    await this.page.getByRole('combobox').filter({ hasText: `Search by ${mode.toLowerCase()}` }).waitFor();
+    await this.page
+      .getByRole('combobox')
+      .filter({ hasText: `Search by ${mode.toLowerCase()}` })
+      .waitFor();
   }
 
   /**
    * Searches local representatives by name or location: picks the mode, types the query, and clicks search.
-   * @param mode Name or Location.
-   * @param query The text to type in the search field.
+   * @param request Search mode and the text to type.
    */
-  async searchRepresentatives(mode: 'Name' | 'Location', query: string): Promise<void> {
-    const { placeholder, button } = REPRESENTATIVE_SEARCH[mode];
-    await this.selectRepresentativeSearch(mode);
-    await this.page.getByPlaceholder(placeholder).fill(query);
-    await this.page.getByRole('button', { name: button, exact: true }).click();
+  async searchRepresentatives(request: RepresentativeQuery): Promise<void> {
+    const strategy = REPRESENTATIVE_SEARCH[request.mode];
+    await this.selectRepresentativeSearch(request.mode);
+    await this.page.getByPlaceholder(strategy.placeholder).fill(request.query);
+    await this.page.getByRole('button', { name: strategy.button, exact: true }).click();
   }
 
   /** Returns the locator for the "N local representatives found" summary. */

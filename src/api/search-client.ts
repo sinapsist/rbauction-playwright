@@ -1,5 +1,6 @@
 import { APIResponse, Page } from '@playwright/test';
-import { SearchResponse } from './types';
+import { SearchResponse } from '../models';
+import { parseSearchResponse } from './parse';
 
 export class SearchClient {
   constructor(private readonly page: Page) {}
@@ -65,6 +66,7 @@ export class SearchClient {
    * @returns A promise resolving to the parsed search response.
    */
   static async readJson(response: APIResponse): Promise<SearchResponse> {
-    return (await response.json()) as SearchResponse;
+    const body: unknown = await response.json();
+    return parseSearchResponse(body);
   }
 }

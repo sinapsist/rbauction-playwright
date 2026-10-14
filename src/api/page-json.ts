@@ -1,25 +1,38 @@
 import { Page } from '@playwright/test';
-import { NextData } from './types';
+import { LocationsPagePayload, YardPagePayload } from '../models';
+import { isRecord, parseLocationsPage, parseYardPage } from './parse';
 
 /**
- * Reads the __NEXT_DATA__ JSON blob from the page and parses it into a NextData object.
+ * Reads `__NEXT_DATA__` and returns `props.pageProps` as unknown.
+ * Callers parse that value into a page model instead of casting it.
  */
-export async function readNextData<T>(page: Page): Promise<NextData<T>> {
+export async function readRawPageProps(page: Page): Promise<unknown> {
   const raw = await page.locator('#__NEXT_DATA__').textContent();
   if (!raw) {
     throw new Error('Page did not include __NEXT_DATA__');
   }
-  return JSON.parse(raw) as NextData<T>;
+
+  const parsed: unknown = JSON.parse(raw);
+  if (!isRecord(parsed) || !isRecord(parsed.props) || !('pageProps' in parsed.props)) {
+    throw new Error('__NEXT_DATA__ did not include props.pageProps');
+  }
+  return parsed.props.pageProps;
 }
 
 /**
- * Extracts the pageProps from a NextData object.
- * Throws an error if props.pageProps is not present.
+ * Reads `props.pageProps` from `__NEXT_DATA__` and parses it into a `LocationsPagePayload`.
+ * @param page
+ * @returns A promise resolving to the parsed locations page payload.
  */
-export function pageProps<T>(data: NextData<T>): T {
-  const props = data.props?.pageProps;
-  if (!props) {
-    throw new Error('__NEXT_DATA__ did not include props.pageProps');
-  }
-  return props;
+export async function readLocationsPage(page: Page): Promise<LocationsPagePayload> {
+  return parseLocationsPage(await readRawPageProps(page));
+}
+
+/**
+ * Reads `props.pageProps` from `__NEXT_DATA__` and parses it into a `YardPagePayload`.
+ * @param page
+ * @returns A promise resolving to the parsed yard page payload.
+ */
+export async function readYardPage(page: Page): Promise<YardPagePayload> {
+  return parseYardPage(await readRawPageProps(page));
 }

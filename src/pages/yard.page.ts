@@ -68,15 +68,19 @@ export class YardPage extends BasePage {
    *  @returns A promise resolving to an array of event card texts.
    */
   async eventCardTexts(): Promise<string[]> {
-    return this.page.getByRole('heading', { name: 'Auction events', exact: true }).evaluate((heading) => {
-      const container = heading.nextElementSibling;
-      if (!container) return [];
-      const links = [...container.querySelectorAll('a')].filter((link) =>
-        /day event|view items/i.test(link.innerText),
-      );
-      const cards = links.filter((link) => !links.some((other) => other !== link && link.contains(other)));
-      return cards.map((link) => link.innerText.trim());
-    });
+    return this.page
+      .getByRole('heading', { name: 'Auction events', exact: true })
+      .evaluate((heading) => {
+        const container = heading.nextElementSibling;
+        if (!container) return [];
+        const links = [...container.querySelectorAll('a')].filter((link) =>
+          /day event|view items/i.test(link.innerText),
+        );
+        const cards = links.filter(
+          (link) => !links.some((other) => other !== link && link.contains(other)),
+        );
+        return cards.map((link) => link.innerText.trim());
+      });
   }
 
   /**
@@ -94,7 +98,9 @@ export class YardPage extends BasePage {
     return texts.flatMap((raw) => {
       const text = raw.replace(/\s+/g, ' ').trim();
       const match = text.match(/^(.*?)\s+(\d[\d,]*\s+items)$/i);
-      return match ? [{ name: match[1].trim(), quantity: match[2] }] : [];
+      const name = match?.[1];
+      const quantity = match?.[2];
+      return name && quantity ? [{ name: name.trim(), quantity }] : [];
     });
   }
 
@@ -115,7 +121,9 @@ export class YardPage extends BasePage {
    */
   async representativeCards(): Promise<RepresentativeCard[]> {
     const panel = this.page.getByRole('tabpanel');
-    const names = (await panel.getByRole('heading', { level: 4 }).allTextContents()).map((name) => name.trim());
+    const names = (await panel.getByRole('heading', { level: 4 }).allTextContents()).map((name) =>
+      name.trim(),
+    );
     const panelText = await panel.innerText();
     let cursor = 0;
 

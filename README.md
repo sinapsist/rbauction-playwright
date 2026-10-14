@@ -6,15 +6,14 @@ The tests run against the live site at `https://www.rbauction.com`. Inventory co
 
 ## Unclarified Questions/Requirements
 
-| Test No| Description |
-| --- | --- |
+| Test No  | Description                                                                                                     |
+| -------- | --------------------------------------------------------------------------------------------------------------- |
 | UI-N-1.9 | There is a probable issue with data because the representative name in the search field includes some junk data |
-| UI-N-1.6 | Japan does not have cities; the local representatives are listed under the country |
-
+| UI-N-1.6 | Japan does not have cities; the local representatives are listed under the country                              |
 
 ## Prerequisites
 
-- Node.js 18 or newer
+- Node.js 20 or newer
 - Google Chrome installed locally
 - Java 8 or newer, used by the Allure command line to build the HTML report
 
@@ -33,6 +32,8 @@ npx playwright install chromium
 
 `npx playwright install chromium` is only required for the bundled-browser fallback. The default run uses Google Chrome.
 
+Dependencies in `package.json` are pinned to exact versions (no `^` or `~`). `.npmrc` sets `save-exact=true`, so a later `npm install <pkg>` stays pinned too. `package-lock.json` pins the rest of the tree.
+
 ## Run the tests
 
 ```bash
@@ -41,6 +42,17 @@ npm run test:e2e         # browser scenarios only
 npm run test:api         # page JSON and POST /api/search
 npm run test:headed      # same suites with a visible browser
 npm run typecheck        # TypeScript check, no browser
+npm run lint             # ESLint
+npm run format           # Prettier write
+npm run format:check     # Prettier check
+npm run check            # typecheck, lint, and format check
+```
+
+Run one severity:
+
+```bash
+npx playwright test --grep @critical
+npx playwright test --grep @blocker
 ```
 
 Run one file or one project:
@@ -100,17 +112,17 @@ Each scenario step is an Allure step. `src/helpers/step.ts` takes a screenshot a
 
 ## What is covered
 
-| Area | Spec |
-| --- | --- |
-| UI-1 Locations directory (`/lp`) | `tests/e2e/locations-directory.spec.ts` |
-| UI-2 Open Edmonton from the directory | `tests/e2e/open-yard.spec.ts` |
-| UI-3 Edmonton yard page, including the seller form component | `tests/e2e/edmonton-yard.spec.ts` |
-| UI-4 Edmonton inventory search | `tests/e2e/edmonton-search.spec.ts` |
-| UI-6 Negative UI (unknown yard, wrong city slug, empty and cross-city search, wrong country list, representative search by unknown name or location, Lagos address with junk text) | `tests/e2e/negative.spec.ts` |
-| API-1 Yards array from the `/lp` page JSON | `tests/api/auction-sites.spec.ts` |
-| API-2 Edmonton yard, events, and items in yard | `tests/api/edmonton-yard.spec.ts` |
-| API-3 `POST /api/search` | `tests/api/inventory-search.spec.ts` |
-| API-4 Negative API (bad JSON, rejected method, missing endpoints, unknown yard) | `tests/api/negative.spec.ts` |
+| Area                                                                                                                                                                               | Spec                                    |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| UI-1 Locations directory (`/lp`)                                                                                                                                                   | `tests/e2e/locations-directory.spec.ts` |
+| UI-2 Open Edmonton from the directory                                                                                                                                              | `tests/e2e/open-yard.spec.ts`           |
+| UI-3 Edmonton yard page, including the seller form component                                                                                                                       | `tests/e2e/edmonton-yard.spec.ts`       |
+| UI-4 Edmonton inventory search                                                                                                                                                     | `tests/e2e/edmonton-search.spec.ts`     |
+| UI-6 Negative UI (unknown yard, wrong city slug, empty and cross-city search, wrong country list, representative search by unknown name or location, Lagos address with junk text) | `tests/e2e/negative.spec.ts`            |
+| API-1 Yards array from the `/lp` page JSON                                                                                                                                         | `tests/api/auction-sites.spec.ts`       |
+| API-2 Edmonton yard, events, and items in yard                                                                                                                                     | `tests/api/edmonton-yard.spec.ts`       |
+| API-3 `POST /api/search`                                                                                                                                                           | `tests/api/inventory-search.spec.ts`    |
+| API-4 Negative API (bad JSON, rejected method, missing endpoints, unknown yard)                                                                                                    | `tests/api/negative.spec.ts`            |
 
 Starting URLs:
 
@@ -122,19 +134,46 @@ There is no public `/api/locations`. Auction-site and yard data are read from th
 
 The Items in yard check counts every category card in the carousel markup, including slides that are off screen.
 
+## Severity
+
+Every test passes a severity from `src/helpers/severity.ts` as its Playwright details. That value is a tag, an HTML-report annotation, and, through an auto fixture, an Allure severity.
+
+| Tag                                                      | Meaning                                              |
+| -------------------------------------------------------- | ---------------------------------------------------- |
+| `@blocker`, `@critical`, `@normal`, `@minor`, `@trivial` | How badly a failure hurts the auction-sites journeys |
+
+A `for` loop over a table registers one test per row, which is how the United States and Canada directory counts, the not-found slugs, and the unknown representative searches are written. Rows that share a single page load, such as the foreign yards that must not appear under Canada, stay one test and loop the table inside it.
+
+## Consistency
+
+Prettier and ESLint keep the TypeScript consistent. `npm run typecheck` uses TypeScript 7 (`tsc` from `@typescript/native`). ESLint still needs the TypeScript 6 compiler API, so the `typescript` package is `@typescript/typescript6` and its binary is `tsc6`. Husky runs lint-staged before each commit.
+
 ## Project structure
 
 ```
 playwright.config.ts          Chrome channel, reporters, e2e and api projects
 tsconfig.json
-package.json
+package.json                  exact dependency versions
+.npmrc                        save-exact=true
+eslint.config.mjs
+.prettierrc.json
+.husky/                       pre-commit format and lint
 scripts/generate-allure-report.sh
 src/browser-options.ts        shared user agent and context options
 src/fixtures/test.ts          page objects and shared start state
 src/pages/                    directory, yard, and search page objects
 src/pages/components/         shared widgets; seller.component.ts is the Become a seller form
-src/api/                      __NEXT_DATA__ reader, payload types, search client
-src/helpers/                  cookies, parsing, Allure steps, API session, JSON screenshots
+src/models/                   domain class hierarchy
+src/models/country.ts         Country → named, name-only, or code-only
+src/models/yard.ts            Yard → directory (permanent or satellite) and detail
+src/models/event.ts           UpcomingEvent → timed, dated, or single-day
+src/models/category.ts        counted or uncounted, then leaf or branch
+src/models/search.ts          search response, results, and records
+src/models/page.ts            locations and yard page payloads
+src/api/parse.ts              unknown JSON into those classes
+src/api/types.ts              re-exports the models and parsers
+src/helpers/                  cookies, parsing, Allure steps, severity, API session
+tests/data/                   parameter tables shared by specs
 tests/e2e/                    UI scenarios
 tests/api/                    JSON and HTTP checks
 ```

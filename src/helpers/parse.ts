@@ -1,7 +1,11 @@
 const EVENT_META =
-    /^(preview|view items|timed auction|\d[\d,]*\s+items|\d+\s+day event|\+\s*\d+\s+more)$/i;
+  /^(preview|view items|timed auction|\d[\d,]*\s+items|\d+\s+day event|\+\s*\d+\s+more)$/i;
 
 const DATE_RANGE = /\b[A-Z][a-z]{2,9}\s+\d{1,2}\s*[-–]\s*[A-Z][a-z]{2,9}\s+\d{1,2}\b/;
+
+function capture(match: RegExpMatchArray | null, group: number): string | undefined {
+  return match?.[group];
+}
 
 /**
  * Reads the inventory total from a results headline or pager, for example `3.1k results` or `1-60 of 3143`.
@@ -9,21 +13,23 @@ const DATE_RANGE = /\b[A-Z][a-z]{2,9}\s+\d{1,2}\s*[-–]\s*[A-Z][a-z]{2,9}\s+\d{
  * @returns The inventory total.
  */
 export function parseDisplayedTotal(text: string): number {
-  const ofMatch = text.match(/\bof\s+([\d,]+)\b/i);
-  if (ofMatch) {
-    return Number(ofMatch[1].replace(/,/g, ''));
+  const ofAmount = capture(text.match(/\bof\s+([\d,]+)\b/i), 1);
+  if (ofAmount) {
+    return Number(ofAmount.replace(/,/g, ''));
   }
 
   const compact = text.match(/([\d,.]+)\s*([kKmM])\s+results\b/);
-  if (compact) {
-    const value = Number(compact[1].replace(/,/g, ''));
-    const factor = compact[2].toLowerCase() === 'm' ? 1_000_000 : 1_000;
+  const compactAmount = capture(compact, 1);
+  const compactUnit = capture(compact, 2);
+  if (compactAmount && compactUnit) {
+    const value = Number(compactAmount.replace(/,/g, ''));
+    const factor = compactUnit.toLowerCase() === 'm' ? 1_000_000 : 1_000;
     return Math.round(value * factor);
   }
 
-  const plain = text.match(/([\d,]+)\s+results\b/i);
-  if (plain) {
-    return Number(plain[1].replace(/,/g, ''));
+  const plainAmount = capture(text.match(/([\d,]+)\s+results\b/i), 1);
+  if (plainAmount) {
+    return Number(plainAmount.replace(/,/g, ''));
   }
 
   throw new Error(`No inventory total found in: ${text}`);

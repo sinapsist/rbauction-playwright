@@ -1,11 +1,12 @@
 import { test as base } from '@playwright/test';
 import { SearchClient } from '../api/search-client';
+import { applyReportedSeverity } from '../helpers/allure-severity';
 import { InventorySearchPage } from '../pages/inventory-search.page';
 import { LocationsPage } from '../pages/locations.page';
 import { YardLocation, YardPage } from '../pages/yard.page';
 import { step } from '../helpers/step';
 
-type AppFixtures = {
+export interface AppFixtures {
   /** Page object only. The test decides when to open the directory. */
   locationsPage: LocationsPage;
   /** Page object only. Used after a test navigates to a yard itself. */
@@ -22,9 +23,22 @@ type AppFixtures = {
    * Akamai rejects API calls that did not first load the site in the browser.
    */
   searchClient: SearchClient;
+}
+
+type ReportingFixtures = {
+  /** Applies the test's severity tag to the Allure report. */
+  reportedSeverity: void;
 };
 
-export const test = base.extend<AppFixtures>({
+export const test = base.extend<AppFixtures & ReportingFixtures>({
+  reportedSeverity: [
+    // eslint-disable-next-line no-empty-pattern -- Playwright requires a destructuring pattern even when no fixture is used.
+    async ({}, use, testInfo) => {
+      await applyReportedSeverity(testInfo.tags);
+      await use();
+    },
+    { auto: true },
+  ],
   /** Page object only. The test decides when to open the directory. */
   locationsPage: async ({ page }, use) => {
     await use(new LocationsPage(page));

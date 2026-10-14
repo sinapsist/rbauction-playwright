@@ -1,19 +1,39 @@
 import { Locator, Page } from '@playwright/test';
 import { BasePage } from './base.page';
 
+/** A card field the markup either renders or omits. An empty string is still present. */
+export type CardField = { state: 'present'; text: string } | { state: 'absent' };
+
 export interface LotSummary {
   title: string;
-  /** Null when the card does not show a location. */
-  location: string | null;
-  /** Null when the card does not show a closing or auction date. */
-  closing: string | null;
+  location: CardField;
+  closing: CardField;
 }
 
-export interface DisplayedTotals {
-  /** Top of the list, for example `3.1k results for "Edmonton"`. Null when not shown. */
-  headline: string | null;
-  /** Bottom of the first page, for example `1-60 of 3194`. Null when not shown. */
-  range: string | null;
+/**
+ * The results view always shows a total somewhere.
+ * `none` is the missing case the test rejects.
+ */
+export type DisplayedTotals =
+  | { source: 'both'; headline: string; range: string }
+  | { source: 'headline'; headline: string }
+  | { source: 'range'; range: string }
+  | { source: 'none' };
+
+export function totalsText(totals: Exclude<DisplayedTotals, { source: 'none' }>): string {
+  switch (totals.source) {
+    case 'both':
+      return `${totals.headline}\n${totals.range}`;
+    case 'headline':
+      return totals.headline;
+    case 'range':
+      return totals.range;
+  }
+}
+
+function cardField(value: string | null): CardField {
+  if (value === null) return { state: 'absent' };
+  return { state: 'present', text: value };
 }
 
 /** Inventory Search Page */
@@ -58,17 +78,19 @@ export class InventorySearchPage extends BasePage {
   }
 
   /**
-   * Reads the total text shown at the bottom of the list and in the pager.
-   * Either one can be missing; the caller parses whichever is shown.
+   * Reads the total text at the top of the list and in the pager.
+   * The result says which of those is on the page.
    * @param city The city in the results heading.
    */
   async displayedTotals(city: string): Promise<DisplayedTotals> {
-    const read = async (locator: Locator) =>
+    const read = async (locator: Locator): Promise<string | null> =>
       (await locator.count()) > 0 ? (await locator.innerText()).trim() : null;
-    return {
-      headline: await read(this.resultsHeading(city)),
-      range: await read(this.resultRange()),
-    };
+    const headline = await read(this.resultsHeading(city));
+    const range = await read(this.resultRange());
+    if (headline !== null && range !== null) return { source: 'both', headline, range };
+    if (headline !== null) return { source: 'headline', headline };
+    if (range !== null) return { source: 'range', range };
+    return { source: 'none' };
   }
 
   /** Returns the locator for the result count heading, for example `102k results` or `3.2k results for "Edmonton"`. */
@@ -78,21 +100,28 @@ export class InventorySearchPage extends BasePage {
 
   /**
    * Reads the title, location, and closing date of every lot on the current page in one pass.
-   * Location and closing are null when the card does not show them.
+   * Location and closing are `absent` when the card does not show them.
    */
   async lotSummaries(): Promise<LotSummary[]> {
     await this.lotCards().first().waitFor();
-    return this.lotCards().evaluateAll((cards) =>
-      cards.map((card) => {
+    const cards = await this.lotCards().evaluateAll((nodes) =>
+      nodes.map((card) => {
         const heading = card.querySelector('h4');
         const location = heading?.parentElement?.nextElementSibling?.querySelector('p');
         const closing = card.querySelector('[data-testid="end-date-section"]');
         return {
           title: heading?.textContent?.trim() ?? '',
           location: location ? (location.textContent ?? '').trim() : null,
-          closing: closing ? (closing.textContent ?? '').replace(/^\s*Closing:\s*/i, '').trim() : null,
+          closing: closing
+            ? (closing.textContent ?? '').replace(/^\s*Closing:\s*/i, '').trim()
+            : null,
         };
       }),
     );
+    return cards.map((card) => ({
+      title: card.title,
+      location: cardField(card.location),
+      closing: cardField(card.closing),
+    }));
   }
 }
